@@ -4,15 +4,12 @@ use strict;
 use utf8;
 use feature ':5.10';
 use Readonly;
-use Getopt::Long;
 use List::MoreUtils qw(uniq);
 use LCS::Tiny;
 use Mojolicious::Lite;
 use Mojo::JSON qw(encode_json);
 use Data::Dumper;
 
-Readonly::Scalar my $DEFAULT_DICT_FILE =>
-                    '/usr/share/dict/words';
 Readonly::Scalar my $LCS => LCS::Tiny->new;
 
 # "normalise" a word by trimming it and converting to lowercase
@@ -79,9 +76,8 @@ sub find_words {
     return \@targets;
 }
 
-my $dict_file = $DEFAULT_DICT_FILE;
-GetOptions('dict=s' => \$dict_file);
-
+plugin Config => {file => 'wordfinder.conf'};
+my $dict_file = app->config->{dict};
 my $dict_words = read_dict($dict_file);
 
 get '/ping' => sub {
