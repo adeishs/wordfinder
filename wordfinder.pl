@@ -63,7 +63,7 @@ sub find_words {
         # <shameless plug> ishs's PhD thesis:
         # http://researchbank.rmit.edu.au/eserv/rmit:6823/Suyoto.pdf
         #
-        # If the LCS score = query length, we have a match
+        # If the LCS score = dict word length, we have a match
         my $lcs_matches = $LCS->LCS($dict_word_chars,
                                     $query_chars);
 
