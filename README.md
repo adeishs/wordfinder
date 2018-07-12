@@ -25,7 +25,7 @@ Open another terminal, and try these:
   $ curl http://127.0.0.1:7860/ping
   OK
   ```
-* Find words in dictionary (the default is `/usr/share/dict/words`) and get the result as a JSON object.
+* Find words in dictionary (the default is `/usr/share/dict/words`. Change in `wordfinder.conf`) and get the result as a JSON object.
   ```
   $ curl http://127.0.0.1:7860/wordfinder/dgo
   ["d","do","dog","g","go","god","o","od","og"]
