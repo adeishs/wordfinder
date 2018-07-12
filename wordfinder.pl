@@ -8,7 +8,6 @@ use List::MoreUtils qw(uniq);
 use LCS::Tiny;
 use Mojolicious::Lite;
 use Mojo::JSON qw(encode_json);
-use Data::Dumper;
 
 Readonly::Scalar my $LCS => LCS::Tiny->new;
 
@@ -59,7 +58,7 @@ sub find_words {
         # query if the query (characters sorted) is a
         # subsequence of the dictionary word (characters
         # sorted). This can be attacked using the longest
-        # common subsequence (LCS)problem, e.g. used in
+        # common subsequence (LCS) problem, e.g. used in
         # <shameless plug> ishs's PhD thesis:
         # http://researchbank.rmit.edu.au/eserv/rmit:6823/Suyoto.pdf
         #
