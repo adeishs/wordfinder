@@ -87,7 +87,7 @@ my $dict_words = read_dict($dict_file);
 get '/ping' => sub {
     my $c = shift;
 
-    return $c->render(text => '', status => 200);
+    return $c->render(text => "OK\n");
 };
 
 get '/wordfinder/:input' => sub {
@@ -95,7 +95,7 @@ get '/wordfinder/:input' => sub {
     my $input = $c->param('input');
 
     my $words = find_words($dict_words, $input);
-    return $c->render(text => encode_json($words));
+    return $c->render(text => encode_json($words) . "\n");
 };
 
 app->start;
