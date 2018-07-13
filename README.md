@@ -4,8 +4,6 @@
 
 These non-core modules must be installed:
 * `Mojolicious::Lite`
-* `Readonly`
-* `LCS::Tiny`
 * `List::MoreUtils`
 
 ## How to use
