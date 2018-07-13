@@ -3,13 +3,9 @@
 use strict;
 use utf8;
 use feature ':5.10';
-use Readonly;
 use List::MoreUtils qw(uniq);
-use LCS::Tiny;
 use Mojolicious::Lite;
 use Mojo::JSON qw(encode_json);
-
-Readonly::Scalar my $LCS => LCS::Tiny->new;
 
 # "normalise" a word by trimming it and converting to lowercase
 sub norm_word {
@@ -53,6 +49,53 @@ sub read_dict {
     return \%dict_word;
 }
 
+sub get_max {
+    my ($a, $b) = @_;
+
+    return $a > $b ? $a : $b;
+}
+
+# get LCS
+sub get_lcs_len {
+    my ($m, $n) = @_;
+
+    my $m_len = scalar @{$m};
+    my $n_len = scalar @{$n};
+    my @scores = ();
+    my $i_m;
+    my $i_n;
+
+    # the original LCS requires construction of a 2D matrix of
+    # size |m| + 1 by |n| + 1. For space efficiency, we can use
+    # only 2 by |n| + 1 as only two rows are accessed in every
+    # iteration
+
+    # init
+    for $i_n (0 .. $n_len) {
+        $scores[0]->[$i_n] = 0;
+    }
+    $scores[1]->[0] = 0;
+
+    my $curr_row = 1;
+    my $prev_row = 0;
+
+    # calculate alignment scores
+    for $i_m (1 .. $m_len) {
+        for $i_n (1 .. $n_len) {
+            $scores[$curr_row]->[$i_n]
+            = $m->[$i_m - 1] eq $n->[$i_n - 1]
+              ? $scores[$prev_row]->[$i_n - 1] + 1
+              : get_max($scores[$prev_row]->[$i_n],
+                        $scores[$curr_row]->[$i_n - 1]);
+        }
+
+        $curr_row = 1 - $curr_row;
+        $prev_row = 1 - $prev_row;
+    }
+
+    return $scores[$prev_row]->[$n_len];
+}
+
 # get dictionary words containing query letters
 sub find_words {
     my ($dict_word, $query) = @_;
@@ -75,17 +118,12 @@ sub find_words {
             # common subsequence (LCS) problem, e.g. used in
             # <shameless plug> ishs's PhD thesis:
             # http://researchbank.rmit.edu.au/eserv/rmit:6823/Suyoto.pdf
-            my $lcs_matches = $LCS->LCS($dict_word->{chars},
-                                        $query_chars);
-
-            if (!$lcs_matches) {
-                next;
-            }
+            my $lcs_len = get_lcs_len($dict_word->{chars},
+                                      $query_chars);
 
             # We hit a target if the LCS score is equal to the
             # dict word length
-            if (scalar @{$lcs_matches}
-                == scalar @{$dict_word->{chars}}) {
+            if ($lcs_len == scalar @{$dict_word->{chars}}) {
                 push @targets, $dict_word->{word};
             }
         }
