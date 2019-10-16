@@ -19,14 +19,18 @@ fun sort_chars($word) {
 }
 
 # read dictionary and set up structure for fast search
-fun read_dict($dict_file) {
+fun read_dict($dict_file = undef) {
+    state $dict_word;
+
+    if ($dict_word) { return $dict_word }
+    unless ($dict_file) { die "Must specify dictionary file" }
+
     open my $fh, '<', $dict_file
-        or die "Can't open $dict_file";
+        or die "Can’t open $dict_file";
 
     # this will be:
     # key: word length
     # value: arrayref of hashref of word and sorted chars
-    my %dict_word;
     while (<$fh>) {
         chomp;
         my $word = $_;
@@ -34,12 +38,12 @@ fun read_dict($dict_file) {
         my %w = (word => $word,
                  chars => sort_chars($norm_word),
                 );
-        push @{$dict_word{length $norm_word}}, \%w;
+        push @{$dict_word->{length $norm_word}}, \%w;
     }
 
     close $fh;
 
-    return \%dict_word;
+    return $dict_word;
 }
 
 fun get_max($a, $b) {
@@ -126,9 +130,7 @@ route ping() {
 route wordfinder() {
     my $input = $app->param('input');
 
-    my $dict_file = app->config->{dict};
-    my $dict_word = read_dict($dict_file);
-    my $words = find_words($dict_word, $input);
+    my $words = find_words(read_dict(), $input);
     return $app->render(text => encode_json($words) . "\n",
                         format => 'json');
 }
@@ -138,4 +140,5 @@ plugin Config => {file => 'wordfinder.conf'};
 get '/ping' => \&ping;
 get '/wordfinder/:input' => \&wordfinder;
 
+read_dict(app->config->{dict});
 app->start;
