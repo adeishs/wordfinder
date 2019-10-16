@@ -4,7 +4,7 @@
 
 These non-core modules must be installed:
 * `Mojolicious::Lite`
-* `List::MoreUtils`
+* `Function::Parameters`
 
 ## How to use
 
