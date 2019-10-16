@@ -1,2 +1,2 @@
 requires "Mojolicious";
-requires "List::MoreUtils";
+requires "Function::Parameters";
