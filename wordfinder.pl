@@ -1,39 +1,36 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use utf8;
-use feature ':5.10';
-use List::MoreUtils qw(uniq);
+use 5.10.0;
 use Mojolicious::Lite;
 use Mojo::JSON qw(encode_json);
+use Function::Parameters { fun => {}, route => { shift => '$app' } };
 
 # "normalise" a word by trimming it and converting to lowercase
-sub norm_word {
-    my ($word) = @_;
-
+fun norm_word($word) {
     $word =~ s/^\s+|\s+$//g;
     return lc $word;
 }
 
 # get an array of sorted characters
-sub sort_chars {
-    my ($word) = @_;
-
-    my @chars = sort split //, $word;
-    return \@chars;
+fun sort_chars($word) {
+    return [sort split //, $word];
 }
 
 # read dictionary and set up structure for fast search
-sub read_dict {
-    my ($dict_file) = @_;
+fun read_dict($dict_file = undef) {
+    state $dict_word;
+
+    if ($dict_word) { return $dict_word }
+    unless ($dict_file) { die "Must specify dictionary file" }
 
     open my $fh, '<', $dict_file
-        or die "Can't open $dict_file";
+        or die "Can’t open $dict_file";
 
     # this will be:
     # key: word length
     # value: arrayref of hashref of word and sorted chars
-    my %dict_word;
     while (<$fh>) {
         chomp;
         my $word = $_;
@@ -41,24 +38,20 @@ sub read_dict {
         my %w = (word => $word,
                  chars => sort_chars($norm_word),
                 );
-        push @{$dict_word{length $norm_word}}, \%w;
+        push @{$dict_word->{length $norm_word}}, \%w;
     }
 
     close $fh;
 
-    return \%dict_word;
+    return $dict_word;
 }
 
-sub get_max {
-    my ($a, $b) = @_;
-
+fun get_max($a, $b) {
     return $a > $b ? $a : $b;
 }
 
 # get LCS
-sub get_lcs_len {
-    my ($m, $n) = @_;
-
+fun get_lcs_len($m, $n) {
     my $m_len = scalar @{$m};
     my $n_len = scalar @{$n};
     my @scores = ();
@@ -97,9 +90,7 @@ sub get_lcs_len {
 }
 
 # get dictionary words containing query letters
-sub find_words {
-    my ($dict_word, $query) = @_;
-
+fun find_words($dict_word, $query) {
     $query = norm_word($query);
 
     my $query_chars = sort_chars($query);
@@ -116,7 +107,7 @@ sub find_words {
             # subsequence of the dictionary word (characters
             # sorted). This can be attacked using the longest
             # common subsequence (LCS) problem, e.g. used in
-            # <shameless plug> ishs's PhD thesis:
+            # <shameless plug> ishs’s PhD thesis:
             # http://researchbank.rmit.edu.au/eserv/rmit:6823/Suyoto.pdf
             my $lcs_len = get_lcs_len($dict_word->{chars},
                                       $query_chars);
@@ -132,23 +123,22 @@ sub find_words {
     return [sort @targets];
 }
 
+route ping() {
+    return $app->render(text => "OK\n", format => 'txt');
+}
+
+route wordfinder() {
+    my $input = $app->param('input');
+
+    my $words = find_words(read_dict(), $input);
+    return $app->render(text => encode_json($words) . "\n",
+                        format => 'json');
+}
+
 plugin Config => {file => 'wordfinder.conf'};
-my $dict_file = app->config->{dict};
-my $dict_word = read_dict($dict_file);
 
-get '/ping' => sub {
-    my $c = shift;
+get '/ping' => \&ping;
+get '/wordfinder/:input' => \&wordfinder;
 
-    return $c->render(text => "OK\n", format => 'txt');
-};
-
-get '/wordfinder/:input' => sub {
-    my $c = shift;
-    my $input = $c->param('input');
-
-    my $words = find_words($dict_word, $input);
-    return $c->render(text => encode_json($words) . "\n",
-                      format => 'json');
-};
-
+read_dict(app->config->{dict});
 app->start;
