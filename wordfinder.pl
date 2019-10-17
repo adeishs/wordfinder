@@ -90,16 +90,27 @@ fun get_lcs_len($m, $n) {
 }
 
 # get dictionary words containing query letters
-fun find_words($dict_word, $query) {
-    $query = norm_word($query);
-
-    my $query_chars = sort_chars($query);
+fun find_words($dict_word, $query, $min_len = 1, $max_len = undef) {
     my $query_len = length $query;
+
+    $min_len //= 1;
+    $max_len //= $query_len;
+    if ($max_len > $query_len) {
+        $max_len = $query_len;
+    }
+
+    if ($min_len > $max_len) {
+        return (undef, 400,
+                'Maximum length must not be less than minimum length'
+               );
+    }
+
+    my $query_chars = sort_chars(norm_word($query));
     my @targets = ();
 
     # we can ignore dictionary words longer than the query as
     # they definitely cannot be made up of the query chars
-    for my $len (1 .. $query_len) {
+    for my $len ($min_len .. $max_len) {
         for my $dict_word (@{$dict_word->{$len}}) {
 
             # a dictionary word is considered a target of the
@@ -128,9 +139,15 @@ route ping() {
 }
 
 route wordfinder() {
-    my $input = $app->param('input');
+    my ($words, $status, $msg) =
+        find_words(read_dict(),
+                   map { $app->param($_) } qw(input min_len max_len));
 
-    my $words = find_words(read_dict(), $input);
+    unless ($words) {
+        return $app->render(text => "$msg\n",
+                            format => 'txt', status => $status);
+    }
+
     return $app->render(text => encode_json($words) . "\n",
                         format => 'json');
 }
@@ -139,6 +156,7 @@ plugin Config => {file => 'wordfinder.conf'};
 
 get '/ping' => \&ping;
 get '/wordfinder/:input' => \&wordfinder;
+get '/wordfinder/:input/:min_len/:max_len' => \&wordfinder;
 
 read_dict(app->config->{dict});
 app->start;
