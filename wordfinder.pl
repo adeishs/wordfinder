@@ -6,6 +6,7 @@ use 5.10.0;
 use Mojolicious::Lite;
 use Mojo::JSON qw(encode_json);
 use Function::Parameters { fun => {}, route => { shift => '$app' } };
+use LCS::BV;
 
 # "normalise" a word by trimming it and converting to lowercase
 fun norm_word($word) {
@@ -52,41 +53,8 @@ fun get_max($a, $b) {
 
 # get LCS
 fun get_lcs_len($m, $n) {
-    my $m_len = scalar @{$m};
-    my $n_len = scalar @{$n};
-    my @scores = ();
-    my $i_m;
-    my $i_n;
-
-    # the original LCS requires construction of a 2D matrix of
-    # size |m| + 1 by |n| + 1. For space efficiency, we can use
-    # only 2 by |n| + 1 as only two rows are accessed in every
-    # iteration
-
-    # init
-    for $i_n (0 .. $n_len) {
-        $scores[0]->[$i_n] = 0;
-    }
-    $scores[1]->[0] = 0;
-
-    my $curr_row = 1;
-    my $prev_row = 0;
-
-    # calculate alignment scores
-    for $i_m (1 .. $m_len) {
-        for $i_n (1 .. $n_len) {
-            $scores[$curr_row]->[$i_n]
-            = $m->[$i_m - 1] eq $n->[$i_n - 1]
-              ? $scores[$prev_row]->[$i_n - 1] + 1
-              : get_max($scores[$prev_row]->[$i_n],
-                        $scores[$curr_row]->[$i_n - 1]);
-        }
-
-        $curr_row = 1 - $curr_row;
-        $prev_row = 1 - $prev_row;
-    }
-
-    return $scores[$prev_row]->[$n_len];
+    state $lcs = LCS::BV->new;
+    return $lcs->LLCS($m, $n);
 }
 
 # get dictionary words containing query letters
