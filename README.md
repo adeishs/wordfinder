@@ -5,6 +5,7 @@
 These non-core modules must be installed:
 * `Mojolicious::Lite`
 * `Function::Parameters`
+* `LCS::BV`
 
 ## How to use
 
